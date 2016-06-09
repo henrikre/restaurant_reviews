@@ -9,6 +9,7 @@ from flask_restful import (
     marshal_with,
     url_for
 )
+from auth import auth
 
 import models
 
@@ -51,10 +52,11 @@ class RestaurantList(Resource):
         return {'restaurants': restaurants}
 
     @marshal_with(restaurant_fields)
+    @auth.login_required
     def post(self):
         args = self.reqparse.parse_args()
         restaurant = models.Restaurant.create(**args)
-        return restaurant, 201
+        return restaurant, 201, {'Location': url_for('resources.restaurants.restaurant', id=restaurant.id)}
 
 
 class Restaurant(Resource):
@@ -73,16 +75,18 @@ class Restaurant(Resource):
         return add_reviews(restaurant_or_404(id))
 
     @marshal_with(restaurant_fields)
+    @auth.login_required
     def put(self, id):
         args = self.reqparse.parse_args()
         query = models.Restaurant.update(**args).where(models.Restaurant.id == id)
         query.execute()
-        return models.Restaurant.get(models.Restaurant.id == id), 200
+        return models.Restaurant.get(models.Restaurant.id == id), 200, {'Location': url_for('resources.restaurants.restaurant', id=id)}
 
+    @auth.login_required
     def delete(self, id):
         query = models.Restaurant.delete().where(models.Restaurant.id == id)
         query.execute()
-        return '', 204
+        return '', 204, {'Location': url_for('resources.restaurants')}
 
 
 restaurants_api = Blueprint('resources.restaurants', __name__)

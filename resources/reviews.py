@@ -1,4 +1,4 @@
-from flask import Blueprint, abort
+from flask import Blueprint, abort, g
 from flask_restful import (
     Resource,
     Api,
@@ -9,6 +9,7 @@ from flask_restful import (
     marshal_with,
     url_for
 )
+from auth import auth
 
 import models
 
@@ -67,9 +68,13 @@ class ReviewList(Resource):
         return {'reviews': reviews}
 
     @marshal_with(review_fields)
+    @auth.login_required
     def post(self):
         args = self.reqparse.parse_args()
-        review = models.Review.create(**args)
+        review = models.Review.create(
+            created_by = g.user,
+            **args
+        )
         return add_restaurant(review)
 
 
@@ -103,10 +108,12 @@ class Review(Resource):
     def get(self, id):
         return add_restaurant(review_or_404(id))
 
+    @auth.login_required
     def put(self, id):
         args = self.reqparse.parse_args()
         try:
             review = models.Review.select().where(
+                models.Review.created_by == g.user,
                 models.Review.id == id
             ).get()
         except models.Review.DoesNotExist:
@@ -119,6 +126,7 @@ class Review(Resource):
         review = add_restaurant(review_or_404(id))
         return review, 200, {'Location': url_for('resources.reviews.review', id=id)}
 
+    @auth.login_required
     def delete(self, id):
         try:
             review = models.Review.select().where(

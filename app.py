@@ -1,19 +1,29 @@
-from flask import Flask
+from flask import Flask, g, jsonify
+from auth import auth
 
 import config
 import models
 
+from resources.users import users_api
 from resources.restaurants import restaurants_api
 from resources.reviews import reviews_api
 
 app = Flask(__name__)
 
+app.register_blueprint(users_api, url_prefix='/api/v1')
 app.register_blueprint(restaurants_api, url_prefix='/api/v1')
 app.register_blueprint(reviews_api, url_prefix='/api/v1')
 
 @app.route('/api/v1')
 def greet():
     return 'Welcome to the restaurant review API'
+
+
+@app.route('/api/v1/users/token', methods=['GET'])
+@auth.login_required
+def get_auth_token():
+    token = g.user.generate_auth_token()
+    return jsonify({'token': token.decode('ascii')})
 
 
 if __name__ == '__main__':
